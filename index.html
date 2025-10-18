@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Secret Message Just For You</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Fonts: Open Sans for body, Great Vibes for the romantic feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* General Body Styling */
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: linear-gradient(to bottom right, #fcebeb, #ffcdd2, #ef9a9a); /* Soft pink/red gradient */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            color: #333;
+        }
+
+        /* --- Envelope Styles --- */
+        #envelope-container {
+            width: 300px;
+            height: 200px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.5s ease;
+            filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.2));
+            perspective: 1000px;
+            z-index: 5; /* Ensure the envelope is above the background but below the modal */
+        }
+
+        /* The main pink body of the envelope */
+        #envelope-body {
+            background-color: #ffb3c1; /* Soft pink */
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            position: absolute;
+        }
+
+        /* The decorative triangular flap on the front */
+        #envelope-front-v {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 100px 150px 0 150px;
+            border-color: #e8799b transparent transparent transparent; /* Darker pink triangle */
+            top: 0;
+            left: 0;
+            border-radius: 12px 12px 0 0;
+            z-index: 2;
+        }
+
+        /* The main flap that opens (the top edge) */
+        #envelope-flap {
+            position: absolute;
+            width: 100%;
+            height: 100px;
+            border-top: 100px solid #ef82a7; /* Flap color (slightly darker) */
+            border-left: 150px solid transparent;
+            border-right: 150px solid transparent;
+            top: 0;
+            left: 0;
+            transform-origin: top; /* Rotate from the top edge */
+            transition: transform 0.6s ease-in-out;
+            z-index: 3;
+            border-radius: 12px 12px 0 0;
+            pointer-events: none; /* Ignore clicks on the flap itself */
+        }
+        
+        /* --- FULL SCREEN LETTER OVERLAY STYLES --- */
+        #letter-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent dark background */
+            z-index: 10; /* High Z-index to cover everything else */
+            
+            /* Initial state: Hidden and transparent */
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        /* The actual paper content */
+        #letter-content {
+            background-color: white;
+            padding: 3rem 2rem;
+            max-width: 95vw; /* Almost full screen width */
+            max-height: 95vh; /* Almost full screen height */
+            width: 800px; /* Maximize readability on large screens */
+            height: auto;
+            overflow-y: auto; /* Enable scrolling if message is long */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            transform: scale(0.8); /* Start smaller for transition */
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative; /* For positioning the close button */
+            text-align: center;
+            /* Flex layout for content centering */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- Active Classes for Reveal Animation --- */
+
+        /* 1. Flap opens backward (same as before) */
+        .open-flap #envelope-flap {
+            transform: rotateX(180deg);
+            z-index: 4; 
+        }
+
+        /* 2. Full-screen letter becomes visible */
+        .letter-visible {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        .letter-visible #letter-content {
+            transform: scale(1) !important; /* Expand to full size */
+        }
+
+        /* Confession Text Styling */
+        .heading-font {
+            font-family: 'Great Vibes', cursive;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Heart Animation for the final message */
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .animate-heart {
+            animation: heartbeat 1.5s infinite ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+    
+    <!-- Outer wrapper for instruction and centering -->
+    <div class="flex flex-col items-center">
+        
+        <!-- Instruction to click -->
+        <p id="instruction" class="text-xl font-semibold text-gray-700 mb-8 transition-opacity duration-500 ease-in-out">
+            Click the envelope to open...
+        </p>
+
+        <!-- Main Envelope Container. Now only handles the envelope visual. -->
+        <div id="envelope-container" onclick="openEnvelope()">
+            
+            <!-- Envelope Body -->
+            <div id="envelope-body">
+                <!-- Front V-fold -->
+                <div id="envelope-front-v"></div>
+
+                <!-- A subtle seal in the center -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl text-white z-20">
+                    💌
+                </div>
+            </div>
+            
+            <!-- Envelope Flap (The part that moves) -->
+            <div id="envelope-flap"></div>
+
+        </div>
+    </div>
+    
+    <!-- --- NEW FULL-SCREEN LETTER OVERLAY (Hidden by default) --- -->
+    <div id="letter-overlay">
+        <div id="letter-content">
+            <!-- Close Button -->
+            <button onclick="closeEnvelope()" class="absolute top-3 right-3 text-gray-500 hover:text-red-500 transition duration-200 p-2 rounded-full bg-white bg-opacity-80">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            
+            <!-- Letter Content -->
+            <div class="w-full">
+                <div class="heading-font text-5xl md:text-6xl text-red-600 mb-6">
+                    For You, Nabila
+                </div>
+                
+                <!-- Toggleable Message Area -->
+                <div id="confessionText" class="text-lg md:text-xl text-gray-700 leading-relaxed mb-6 max-w-lg mx-auto">
+                    <!-- Message content loaded by JavaScript -->
+                </div>
+
+                <!-- Toggle Link/Text - Changed from button to span for text-based interaction -->
+                <span id="toggleMessageButton" onclick="toggleMessage()" 
+                    class="inline-block cursor-pointer text-pink-500 text-lg font-semibold hover:text-red-600 hover:underline transition duration-300 mb-8">
+                    <!-- Text loaded by JavaScript -->
+                </span>
+                
+                <!-- <p class="heading-font text-4xl text-red-500 mt-4 animate-heart">
+                    [Your Name] ❤️
+                </p> -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Get elements
+        const envelope = document.getElementById('envelope-container');
+        const instruction = document.getElementById('instruction');
+        const letterOverlay = document.getElementById('letter-overlay');
+        const confessionTextElement = document.getElementById('confessionText');
+        const toggleButton = document.getElementById('toggleMessageButton');
+
+        // Define messages and button texts
+        const messages = [
+            {
+                buttonText: "Translate",
+                text: `
+                    Meow meow meow meow meow meow meow.
+                `
+            },
+            {
+                buttonText: "Translate",
+                text: `
+                    From the moment I saw you, I was amazed by your beauty. But as I got to know you, I realized you’re so much more than that.
+                    <br><br>
+                    Your voice, your laugh, the way you talk, your smile, your maturity, your intelligence, and even the way you dress — everything about you amazes me even more.
+                    <br><br>
+                    I really appreciate you as a person. I don’t think I’ve ever met anyone as wonderful as you… and I think I like you.
+                `
+            }
+        ];
+
+        let currentMessageIndex = 0; // Starts at the first message
+
+        // Function to update the text and button based on the current index
+        function renderMessage() {
+            const current = messages[currentMessageIndex];
+            // Use innerHTML because the text includes <br> tags
+            confessionTextElement.innerHTML = current.text; 
+            toggleButton.textContent = current.buttonText;
+        }
+
+        // Function to cycle between the two messages
+        function toggleMessage() {
+            // Cycle between 0 and 1
+            currentMessageIndex = 1 - currentMessageIndex;
+            renderMessage();
+        }
+
+        function openEnvelope() {
+            // Disable clicking the envelope after it's been clicked once to start the sequence
+            envelope.onclick = null;
+            instruction.style.opacity = '0'; // Hide the instruction
+
+            // 1. Open the flap instantly
+            envelope.classList.add('open-flap');
+
+            // 2. Wait for the flap opening animation (0.6s) to finish, then show the full-screen letter.
+            setTimeout(() => {
+                letterOverlay.classList.add('letter-visible');
+                renderMessage(); // Render the initial message when the letter appears
+            }, 650); 
+        }
+
+        function closeEnvelope() {
+            // 1. Hide the full-screen letter instantly (this starts the 0.5s opacity/transform transition)
+            letterOverlay.classList.remove('letter-visible');
+
+            // 2. Wait for the letter to fade out (0.5s), then close the flap (0.6s transition).
+            setTimeout(() => {
+                envelope.classList.remove('open-flap');
+                instruction.style.opacity = '1'; // Show the instruction again
+                
+                // Reset to the initial message state when closing
+                currentMessageIndex = 0;
+                
+                // Re-enable clicking the envelope
+                envelope.onclick = openEnvelope; 
+            }, 550); 
+        }
+        
+        // Attach the initial open function to the envelope container
+        envelope.onclick = openEnvelope;
+    </script>
+
+</body>
+</html>
